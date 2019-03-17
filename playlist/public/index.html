@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Playlist</title>
+        <meta name="viewport" content="width=device-width">
+
+        <link rel="stylesheet" href="css/bootstrap.css">
+        <link rel="stylesheet" href="css/main.css">
+    </head>
+    <body>
+        <div class="container">
+            <h1>Playlist Challenge</h1>
+        </div>
+        <div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react-dom.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.21.1/babel.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="./js/main.js"></script>
+
+<script type="text/babel">
+
+class App extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {inputValue: '', library: [], playlist: []};
+        this.createPlaylist = this.createPlaylist.bind(this);
+        this.handleInputChange = this.handleInputChange.bind(this);
+        this.addToPlaylist = this.addToPlaylist.bind(this);
+    }
+    componentDidMount() {
+        // get http ressources when app component is ready
+        axios.get('/library/', {
+            params: {id: null}
+          })
+          .then(response => {
+            // update local state of component
+            this.setState({
+              library: response.data
+            });
+          });
+          // reused
+          this.getPlaylists();
+    }
+    getPlaylists() {
+        // get http playlists when app component is ready
+        axios.get('/playlist/', {})
+          .then(response => {
+            // update local state of component
+            this.setState({
+              playlist: response.data
+            });
+          });
+    }
+    handleInputChange(event) {
+        this.setState({inputValue: event.target.value});
+    }
+    createPlaylist(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const inputNameValue = this.state.inputValue;
+        // post to server the update
+        axios.post('/playlist/', {
+            name: inputNameValue,
+            songs: []
+        }).then(response => {
+            this.setState({playlist: this.state.playlist.concat({id: response.data.id, name: inputNameValue, songs:[]})})
+        })
+    }
+    addToPlaylist(e, playlist, song) {
+        axios.post('/playlist/' + playlist.id + '/', {
+            name: playlist.name,
+            songs: this.state.playlist[playlist.id].songs.concat(song.id)
+        }).then(response => {
+            // choose betwenn update locally or get another time the ressource
+            this.getPlaylists();
+        })
+    }
+
+    render() {
+        return (
+            <div>
+                <div className="row">
+                    <div className="span5">
+                        <form>
+                          <fieldset>
+                            <legend>Create a Playlist</legend>
+                            <label>Playlist name :&nbsp;</label>
+                            <input type="text" placeholder="Type something…" value={this.state.inputValue} onChange={this.handleInputChange}/>
+                            <button type="submit" className="btn" onClick={(e) => this.createPlaylist(e)} >Create Playlist</button>
+                          </fieldset>
+                        </form>
+                        <div>Playlists List :&nbsp;</div>
+                        <table className="table table-striped"><tbody>{this.state.playlist.map((d) => {return <tr key={d.id}><td className="list-group-item" key={d.id}><span>{d.name}</span><span>&nbsp;&nbsp;&nbsp; songs id : {d.songs}</span></td></tr>} )}</tbody></table>
+                    </div>
+                    <div className="span4">
+                        <div>Library List :&nbsp;</div>
+                        <table className="table table-striped span4">
+                            <tbody>{this.state.library.map((songElement) => {
+                                return <tr key={songElement.id}><td className="list-group-item" key={songElement.id}><span>{songElement.title}</span>
+                            </td>
+                            <td>
+                                <div className="btn-group">
+                                  <a className="btn dropdown-toggle" data-toggle="dropdown" href="#">
+                                    Add to Playlist
+                                    <span className="caret"></span>
+                                  </a>
+                                  <ul className="dropdown-menu">
+                                    {this.state.playlist.map((playlistElement) => {return <li onClick={(e) => this.addToPlaylist(e, playlistElement, songElement)} className="listAdd" key={playlistElement.id}><span>{playlistElement.name}</span><span></span></li>} )}
+                                  </ul>
+                                </div>
+                            </td>
+                        </tr>} )}</tbody></table>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+}
+// Render the app
+ReactDOM.render(
+    <App />,
+    document.getElementById('root')
+);
+</script>
+
+        <!-- <script src="js/main.js"></script> -->
+    </body>
+</html>
